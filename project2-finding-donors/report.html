@@ -13151,7 +13151,7 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[75]:</div>
+<div class="prompt input_prompt">In&nbsp;[121]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># 为这个项目导入需要的库</span>
@@ -14279,7 +14279,15 @@ Final F-score on the validation data: 0.7618
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Q：</p>
+<hr>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="&#31532;&#19968;&#27425;&#20462;&#25913;">&#31532;&#19968;&#27425;&#20462;&#25913;<a class="anchor-link" href="#&#31532;&#19968;&#27425;&#20462;&#25913;">&#182;</a></h2><p>Q：</p>
 <p>很棒，对Adaboost的预测过程掌握得很不错，但训练过程的小细节需要注意:</p>
 <ul>
 <li>你还需要知道分类器在<code>Adaboost</code>中是如何组合在一起的。比如说:对于分类能力很强的基分类器和分类能力很弱的基分类器，我们是要平等对待还是说按照能力的大小有区别地对待呢？</li>
@@ -14294,6 +14302,566 @@ Final F-score on the validation data: 0.7618
 <li>当样本的误差权重$W$更新时，被当前弱分类器分类错误的样本，其权重会更大，而分类正确的样本，其权重会越小；</li>
 </ul>
 <p>使用<code>Adaboost</code>训练模型的过程：假设有一堆人，对地上的一堆地瓜进行分类，在经过讨论之后，这堆人在看到一个新的地瓜时，就可以达成共识，得出这个地瓜是好是坏。这个达成共识的过程就相当于模型训练的过程，在这个过程中，从第一个人开始，第一个人觉得看起来好看的瓜就是好瓜，但是有些瓜不好判断是好看还是不好看，可能介于中间；第二个人决定对第一个人难以判断的瓜进行重点考察，之前难以区分是不是好看的瓜，可以通过敲击的声音刚好区分开，但也有一些通过敲击的声音难以区分的地瓜；第三个人再重点考察前面一个人难以区分的地瓜……；如此迭代下去，最后综合所有参与过这一过程的人的意见，并且谁能够在这堆地瓜上区分得更准确，谁的话事权就越大，这样这些人刚好能把这堆瓜全部正确区分出好坏。这样一个模型就训练完成了，以后再看到地瓜时，大家站在一起，投个票，例如话事权大的人最多可以投10票（好或坏），话事权小的人最多可以投2票（好或坏），就可以判断出瓜的好坏，这就是使用模型预测的过程。</p>
+<h2 id="&#31532;&#20108;&#27425;&#20462;&#25913;&#65306;">&#31532;&#20108;&#27425;&#20462;&#25913;&#65306;<a class="anchor-link" href="#&#31532;&#20108;&#27425;&#20462;&#25913;&#65306;">&#182;</a></h2><p><code>AdaBoost</code>的算法步骤：
+给定一个二分类的数据集：$T={(x_1, y_1), (x_2,y_2), (x_3, y_3), \dotso, (x_N, y_N)}$
+每个样本点由特征向量和对应的标记组合，特征向量$x_i\in\mathcal{X}\subseteq\mathbf{R}^n$，标记$y_i\in\mathcal{Y}={-1,+1}$。其中$\mathcal{X}$是特征空间，$\mathcal{Y}$是标记集合。Adaboost从训练数据中学习一系列弱分类算法/基本分类器，并最终使用权重将这些弱分类器线性组合成一个强分类器。
+输入：训练数据集$T$，对应的标签$y_i$，某种弱学习算法（例如决策树）。
+输出：最终的分类器$G(x)$。
+步骤如下：</p>
+<ol>
+<li>初始化训练数据集中每个采样点的误差权重分布（该权重用于改变该采样点在后续处理过程中的重要性）：
+$$
+D_1=(w_{1,1},w_{1,2},w_{1,3},\dotso,w_{1,N}), w_{1,i}=\frac{1}{N},i=1,2,3,\dotso,N
+$$
+$D_1$的下标$1$表示训练的轮数，$D_1$即第一轮</li>
+<li>设训练轮数$m=1,2,3,\dotso,M$<ol>
+<li>使用权重分布$D_m$对训练数据集$T$进行训练，得到弱分类器：
+$$
+G_m(x):\mathcal{X}\mapsto{-1,+1}
+$$</li>
+<li>计算$G_m(x)$在训练集上的分类误差
+$$
+e_m=\sum_{i=1}^{N}P(G_m(x)\neq y_i)=\sum_{i=1}^{N}w_{m,i}I(G_m(x_i)\neq y_i)
+$$
+上式中的$I(G_m(x_i)\neq y_i)$是指示函数，表示当$G_m(x_i)=y_i$时，$I(x)=1$，否则$I(x)=0$，那么$\sum_{i=1}^{N}w_{m,i}I(G_m(x_i)\neq y_i)$就等于弱分类器在所有错误分类的样本中，对应的误差权重$w_{m,i}$之和。</li>
+<li>计算弱分类器$G_m(x)$在最终输出的强分类器中的权重系数，表示这一弱分类器在最终强分类器中的重要程度：
+$$
+\alpha=\frac{1}{2}ln\frac{1-e_m}{e_m}
+$$</li>
+<li>更新计算出下一轮的弱分类器所需的样本权重：
+$$
+D_{m+1}=(w_{m+1,1},w_{m+1,2},w_{m+1,3},\dotso,w_{m+1,N}) \\
+w_{m+1,i}=\frac{w_{m,i}}{Z_m}e^{-\alpha_{m}y_{i}G_{m}(x_i)}, i=1,2,3,\dotso,N
+$$
+其中，$Z_m$是上一轮权重的归一化因子
+$$
+Z_m=\sum_{i=1}^{N}w_{m,i}e^{-\alpha_{m}y_{i}G_{m}(x)}
+$$</li>
+</ol>
+</li>
+<li>经过$M$轮训练之后，就可以得到$M$个弱分类器，和对应的$M$个权重系数$\alpha_i$，最终的强分类器为：
+$$
+g(x) = sign[f(x)]=sign[\sum_{m=1}^{M}\alpha_{m}G_{m}(x)]
+$$</li>
+</ol>
+<p>下面举例说明<code>Adaboost</code>训练的过程。
+给定下表所示的数据集：</p>
+<table>
+<thead><tr>
+<th style="text-align:center">序号</th>
+<th style="text-align:center">1</th>
+<th style="text-align:center">2</th>
+<th style="text-align:center">3</th>
+<th style="text-align:center">4</th>
+<th style="text-align:center">5</th>
+<th style="text-align:center">6</th>
+<th style="text-align:center">7</th>
+<th style="text-align:center">8</th>
+<th style="text-align:center">9</th>
+<th style="text-align:center">10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">$x$</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">3</td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">5</td>
+<td style="text-align:center">6</td>
+<td style="text-align:center">7</td>
+<td style="text-align:center">8</td>
+<td style="text-align:center">9</td>
+</tr>
+<tr>
+<td style="text-align:center">$y$</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">-1</td>
+<td style="text-align:center">-1</td>
+<td style="text-align:center">-1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">-1</td>
+</tr>
+</tbody>
+</table>
+<p>假定弱分类器由下式生成，其中阈值$v$在使得当前弱分类器在训练数据集上的分类误差最小时取得。
+  $$
+  G_m(x) = \left\{ \begin{array}{rcl}
+  1, &amp;  x&lt;v \\
+  -1, &amp;  x &gt;v
+  \end{array}\right.
+  , 或者  G_m(x) = \left\{ \begin{array}{rcl}
+  1, &amp;  x&gt;v \\
+  -1, &amp;  x&lt;v
+  \end{array}\right.
+  $$
+使用AdaBoost的实现过程：</p>
+<ol>
+<li>第一轮，$m=1$<ol>
+<li>初始化样本的权重值
+$$
+D_1=(w_{1,1},w_{1,2},w_{1,3},\dotso,w_{1,10}), w_{1,i}=\frac{1}{10}=0.1
+$$</li>
+<li>在权重分布$D_1$的基础上，训练弱分类器，训练结果如下</li>
+</ol>
+</li>
+</ol>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[184]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="k">import</span> <span class="n">accuracy_score</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">weak_classifier_params</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">m</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">weak_classifier</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">sign</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    find a weak learner, with which can minimize error</span>
+<span class="sd">    x, training data</span>
+<span class="sd">    threshold, algorithm parameter, if x_i &gt; threshold, y_i = sign, else y_i = -sign</span>
+<span class="sd">    sign, algorithm parameter</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">val</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">sign</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">sign</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+<span class="k">def</span> <span class="nf">calculate_error</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pred</span><span class="p">,</span> <span class="n">D</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    calculate weighted error</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">real</span> <span class="o">==</span> <span class="n">pred</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">val</span><span class="p">:</span>
+            <span class="n">error</span> <span class="o">+=</span> <span class="n">D</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">error</span>
+
+<span class="k">def</span> <span class="nf">find_weak_learner</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">D</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    x, training data</span>
+<span class="sd">    y, training label</span>
+<span class="sd">    D, weight distribution in every sample inside x</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">min_weighted_error</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">best_threshold</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">best_sign</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">thresholds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span>
+    <span class="k">for</span> <span class="n">threshold</span> <span class="ow">in</span> <span class="n">thresholds</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">sign</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">pred</span> <span class="o">=</span> <span class="n">weak_classifier</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">sign</span><span class="p">)</span>
+            <span class="n">error</span> <span class="o">=</span> <span class="n">calculate_error</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">pred</span><span class="p">,</span> <span class="n">D</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">error</span> <span class="o">&lt;</span> <span class="n">min_weighted_error</span><span class="p">:</span>
+                <span class="n">min_weighted_error</span> <span class="o">=</span> <span class="n">error</span>
+                <span class="n">best_threshold</span> <span class="o">=</span> <span class="n">threshold</span>
+                <span class="n">best_sign</span> <span class="o">=</span> <span class="n">sign</span>
+    <span class="k">return</span> <span class="n">min_weighted_error</span><span class="p">,</span> <span class="n">best_threshold</span><span class="p">,</span> <span class="n">best_sign</span>
+
+<span class="n">D1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">/</span><span class="mi">10</span>
+<span class="n">min_weighted_error</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">sign</span> <span class="o">=</span> <span class="n">find_weak_learner</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">D1</span><span class="p">)</span>
+
+<span class="c1"># D1 对应的预测</span>
+<span class="n">G1_pred</span> <span class="o">=</span> <span class="n">weak_classifier</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">sign</span><span class="p">)</span>
+<span class="n">e1</span> <span class="o">=</span> <span class="n">calculate_error</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">G2_pred</span><span class="p">,</span> <span class="n">D1</span><span class="p">)</span>
+<span class="n">a1</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">e1</span><span class="p">)</span><span class="o">/</span><span class="n">e1</span><span class="p">)</span>
+<span class="n">Z1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">D1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">a1</span><span class="o">*</span><span class="n">y</span><span class="o">*</span><span class="n">G1_pred</span><span class="p">))</span>
+<span class="n">D2</span> <span class="o">=</span> <span class="n">D1</span><span class="o">/</span><span class="n">Z1</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">a1</span><span class="o">*</span><span class="n">y</span><span class="o">*</span><span class="n">G1_pred</span><span class="p">)</span>
+<span class="n">weak_classifier_params</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="n">a1</span><span class="p">,</span> <span class="s1">&#39;threshold&#39;</span><span class="p">:</span> <span class="n">threshold</span><span class="p">,</span> <span class="s1">&#39;sign&#39;</span><span class="p">:</span> <span class="n">sign</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="n">min_weighted_error</span><span class="p">})</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;result sign:</span><span class="si">{}</span><span class="s2">, threshold:</span><span class="si">{}</span><span class="s2">, min error:</span><span class="si">{:0.4f}</span><span class="s2">, a1:</span><span class="si">{:0.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sign</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="p">,</span> <span class="n">e1</span><span class="p">,</span> <span class="n">a1</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>result sign:-1, threshold:2.5, min error:0.3000, a1:0.4236
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<ol>
+<li><ol>
+<li><p>由以上结果可以知道，当阈值$v=2.5$时分类误差最小，因此得到弱分类器
+$$
+G_1(x) = \left\{ \begin{array}{rcl}
+1, &amp;  x&lt;2.5 \\
+-1, &amp;  x &gt;2.5
+\end{array}\right.
+$$</p>
+</li>
+<li><p>由以上结果可以知道，$G_1(x)$在训练集上的训练误差率为$e_1=P(G_i(x_i))\neq y_i)=0.3$</p>
+</li>
+<li>计算$G_1(x)$的权重系数：$\alpha_1=\frac{1}{2}ln\frac{1-e_1}{e_1}=0.4236$</li>
+<li>更新所有样本点的误差权重分布，用以下一轮训练使用：
+$$
+D_2=(w_{2,1},w_{2,2},w_{2,3},\dotso,w_{2,N}) \\
+w_{2,i}=\frac{w_{1,i}}{Z_1}e^{-\alpha_{1}y_{i}G_{1}(x_i)}
+$$</li>
+<li>第一轮结束后得到的最终分类器为：$g_1(x)=sign[f_1(x)]=sign[0.4236*G1(x)]$</li>
+</ol>
+</li>
+</ol>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[185]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">weak_classifier_params</span><span class="p">:</span>
+    <span class="n">pred</span> <span class="o">+=</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">weak_classifier</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;threshold&#39;</span><span class="p">],</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;sign&#39;</span><span class="p">])</span>
+<span class="n">pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span>
+<span class="n">final_error</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">accuracy_score</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">pred</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Predict error in classifier in run m=</span><span class="si">{}</span><span class="s2">: </span><span class="si">{:.2f}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">result:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">final_error</span><span class="p">,</span> <span class="p">(</span><span class="n">pred</span> <span class="o">==</span> <span class="n">y</span><span class="p">)))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Predict error in classifier in run m=1: 0.30,
+result:[ True  True  True  True  True  True False False False  True]
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<ol>
+<li><ol>
+<li>第一轮结束后，最终分类器仍然有0.3的误差，所以需要增加更多弱分类器。</li>
+</ol>
+</li>
+<li><p>第二轮，$m=2$</p>
+<ol>
+<li>根据前面计算得到的$D_2$，计算出下一个弱分类器</li>
+</ol>
+</li>
+</ol>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[186]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">m</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">min_weighted_error</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">sign</span> <span class="o">=</span> <span class="n">find_weak_learner</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">D2</span><span class="p">)</span>
+
+<span class="c1"># D2 对应的预测</span>
+<span class="n">G2_pred</span> <span class="o">=</span> <span class="n">weak_classifier</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">sign</span><span class="p">)</span>
+<span class="n">e2</span> <span class="o">=</span> <span class="n">calculate_error</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">G2_pred</span><span class="p">,</span> <span class="n">D2</span><span class="p">)</span>
+<span class="n">a2</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">e2</span><span class="p">)</span><span class="o">/</span><span class="n">e2</span><span class="p">)</span>
+<span class="n">Z2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">D2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">a2</span><span class="o">*</span><span class="n">y</span><span class="o">*</span><span class="n">G2_pred</span><span class="p">))</span>
+<span class="n">D3</span> <span class="o">=</span> <span class="n">D2</span><span class="o">/</span><span class="n">Z2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">a2</span><span class="o">*</span><span class="n">y</span><span class="o">*</span><span class="n">G2_pred</span><span class="p">)</span>
+<span class="n">weak_classifier_params</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="n">a2</span><span class="p">,</span> <span class="s1">&#39;threshold&#39;</span><span class="p">:</span> <span class="n">threshold</span><span class="p">,</span> <span class="s1">&#39;sign&#39;</span><span class="p">:</span> <span class="n">sign</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="n">min_weighted_error</span><span class="p">})</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;result sign:</span><span class="si">{}</span><span class="s2">, threshold:</span><span class="si">{}</span><span class="s2">, min error:</span><span class="si">{:0.4f}</span><span class="s2">, a2:</span><span class="si">{:0.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sign</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="p">,</span> <span class="n">min_weighted_error</span><span class="p">,</span> <span class="n">a2</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>result sign:-1, threshold:8.5, min error:0.2143, a2:0.6496
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<ol>
+<li><ol>
+<li><p>由以上结果可以知道，当阈值$v=8.5$时分类误差最小，因此得到弱分类器
+$$
+G_2(x) = \left\{ \begin{array}{rcl}
+1, &amp;  x&lt;8.5 \\
+-1, &amp;  x &gt;8.5
+\end{array}\right.
+$$</p>
+</li>
+<li><p>由以上结果可以知道，$G_2(x)$在训练集上的训练误差率为$e_2=P(G_2(x_i))\neq y_i)=0.2143$</p>
+</li>
+<li>计算$G_2(x)$的权重系数：$\alpha_2=\frac{1}{2}ln\frac{1-e_2}{e_2}=0.6496$</li>
+<li>更新所有样本点的误差权重分布，用以下一轮训练使用：
+$$
+D_3=(w_{3,1},w_{3,2},w_{3,3},\dotso,w_{3,N}) \\
+w_{3,i}=\frac{w_{2,i}}{Z_2}e^{-\alpha_{2}y_{i}G_{2}(x_i)}
+$$</li>
+<li>第一轮结束后得到的最终分类器为：$g_2(x)=sign[f_2(x)]=sign[0.4236*G_1(x)+0.6496*G_2(x)]$</li>
+</ol>
+</li>
+</ol>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[187]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">weak_classifier_params</span><span class="p">:</span>
+    <span class="n">pred</span> <span class="o">+=</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">weak_classifier</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;threshold&#39;</span><span class="p">],</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;sign&#39;</span><span class="p">])</span>
+<span class="n">pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span>
+<span class="n">final_error</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">accuracy_score</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">pred</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Predict error in classifier in run m=</span><span class="si">{}</span><span class="s2">: </span><span class="si">{:.2f}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">result:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">final_error</span><span class="p">,</span> <span class="p">(</span><span class="n">pred</span> <span class="o">==</span> <span class="n">y</span><span class="p">)))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Predict error in classifier in run m=2: 0.30,
+result:[ True  True  True False False False  True  True  True  True]
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<ol>
+<li><ol>
+<li>第二轮结束后，最终分类器仍然有0.3的误差，所以需要增加更多弱分类器。</li>
+</ol>
+</li>
+</ol>
+<ol>
+<li>第三轮，$m=3$<ol>
+<li>根据前面计算得到的$D_3$，计算出下一个弱分类器</li>
+</ol>
+</li>
+</ol>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[188]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">m</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">min_weighted_error</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">sign</span> <span class="o">=</span> <span class="n">find_weak_learner</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">D3</span><span class="p">)</span>
+
+<span class="c1"># D3 对应的预测</span>
+<span class="n">G3_pred</span> <span class="o">=</span> <span class="n">weak_classifier</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">sign</span><span class="p">)</span>
+<span class="n">e3</span> <span class="o">=</span> <span class="n">calculate_error</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">G3_pred</span><span class="p">,</span> <span class="n">D3</span><span class="p">)</span>
+<span class="n">a3</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">e3</span><span class="p">)</span><span class="o">/</span><span class="n">e3</span><span class="p">)</span>
+<span class="n">Z3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">D3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">a3</span><span class="o">*</span><span class="n">y</span><span class="o">*</span><span class="n">G3_pred</span><span class="p">))</span>
+<span class="n">D4</span> <span class="o">=</span> <span class="n">D3</span><span class="o">/</span><span class="n">Z3</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">a3</span><span class="o">*</span><span class="n">y</span><span class="o">*</span><span class="n">G3_pred</span><span class="p">)</span>
+<span class="n">weak_classifier_params</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="n">a3</span><span class="p">,</span> <span class="s1">&#39;threshold&#39;</span><span class="p">:</span> <span class="n">threshold</span><span class="p">,</span> <span class="s1">&#39;sign&#39;</span><span class="p">:</span> <span class="n">sign</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="n">min_weighted_error</span><span class="p">})</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;result sign:</span><span class="si">{}</span><span class="s2">, threshold:</span><span class="si">{}</span><span class="s2">, min error:</span><span class="si">{:0.4f}</span><span class="s2">, a3:</span><span class="si">{:0.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sign</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="p">,</span> <span class="n">min_weighted_error</span><span class="p">,</span> <span class="n">a3</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>result sign:1, threshold:5.5, min error:0.1818, a3:0.7520
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<ol>
+<li><ol>
+<li><p>由以上结果可以知道，当阈值$v=5.5$时分类误差最小，因此得到弱分类器
+$$
+G_3(x) = \left\{ \begin{array}{rcl}
+1, &amp;  x&gt;5.5 \\
+-1, &amp;  x&lt;5.5
+\end{array}\right.
+$$</p>
+</li>
+<li><p>由以上结果可以知道，$G_3(x)$在训练集上的训练误差率为$e_3=P(G_3(x_i))\neq y_i)=0.1818$</p>
+</li>
+<li>计算$G_3(x)$的权重系数：$\alpha_3=\frac{1}{2}ln\frac{1-e_3}{e_3}=0.7520$</li>
+<li>更新所有样本点的误差权重分布，用以下一轮训练使用：
+$$
+D_4=(w_{4,1},w_{4,2},w_{4,3},\dotso,w_{4,N}) \\
+w_{4,i}=\frac{w_{3,i}}{Z_3}e^{-\alpha_{3}y_{i}G_{3}(x_i)}
+$$</li>
+<li>第一轮结束后得到的最终分类器为：$g_3(x)=sign[f_3(x)]=sign[0.4236*G_1(x)+0.6496*G_2(x)+0.7520*G_3(x)]$</li>
+</ol>
+</li>
+</ol>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[189]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">weak_classifier_params</span><span class="p">:</span>
+    <span class="n">pred</span> <span class="o">+=</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">weak_classifier</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;threshold&#39;</span><span class="p">],</span> <span class="n">param</span><span class="p">[</span><span class="s1">&#39;sign&#39;</span><span class="p">])</span>
+<span class="n">pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span>
+<span class="n">final_error</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">accuracy_score</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">pred</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Predict error in classifier in run m=</span><span class="si">{}</span><span class="s2">: </span><span class="si">{:.2f}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">result:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">final_error</span><span class="p">,</span> <span class="p">(</span><span class="n">pred</span> <span class="o">==</span> <span class="n">y</span><span class="p">)))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Predict error in classifier in run m=3: 0.00,
+result:[ True  True  True  True  True  True  True  True  True  True]
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<ol>
+<li><ol>
+<li>此时，最终分类器$g_3(x)$在训练集上的误差为0，不需要再添加新的弱分类器，结束计算。</li>
+</ol>
+</li>
+</ol>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<blockquote><p>参考：《统计学习方法》，李航，第8章</p>
+</blockquote>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<hr>
 
 </div>
 </div>

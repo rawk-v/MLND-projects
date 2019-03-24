@@ -1,0 +1,10 @@
+filename,label
+./test_data/test0.jpg,4+8=12
+./test_data/test1.jpg,5+(2*3)=11
+./test_data/test6.jpg,2-(8+0)=-6
+./test_data/test7.jpg,(4-5)+9=8
+./test_data/test8.jpg,8+9+8=25
+./test_data/test9.jpg,1*7+6=13
+./test_data/test10.jpg,1*7+6=13
+./test_data/test11.jpg,(4+1)*8=40
+./test_data/test12.jpg,1*3*5=15

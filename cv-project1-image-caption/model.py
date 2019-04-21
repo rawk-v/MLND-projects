@@ -37,19 +37,45 @@ class DecoderRNN(nn.Module):
 #         print("DecoderRNN forward features.shape:", features.shape)
 #         print("DecoderRNN forward captions.shape:", captions.shape)
         features = features.view(features.shape[0], 1, features.shape[1])
-        h = torch.zeros((self.num_layers, features.shape[0], self.hidden_size), dtype=torch.float32)    # batch_size, num_layers, hidden_size
+        h = torch.zeros((self.num_layers, features.shape[0], self.hidden_size), dtype=torch.float32)    # num_layers, batch_size, hidden_size
         c = torch.zeros((self.num_layers, features.shape[0], self.hidden_size), dtype=torch.float32)
 
         h = h.cuda()
         c = c.cuda()
 
-        output1, hc = self.lstm(features, (h, c))
-        embedded_caption = self.embed(captions[:, 1:])
-        output2, hc = self.lstm(embedded_caption, hc)
-        output = torch.cat((output1, output2), dim=1)
-        x = self.fc1(output)
-#         print("DecoderRNN forward x.shape:", x.shape)
-        return self.softmax(x)
+        softmax_outputs = torch.zeros((features.shape[0], captions.shape[1], self.vocab_size))     # batch_size, n_steps, vocab_size
+        softmax_outputs = softmax_outputs.cuda()
+
+        lstm_output, hc = self.lstm(features, (h, c))
+        fc1_output = self.fc1(lstm_output)
+        softmax_output = self.softmax(fc1_output)   # TODO, save softmax_output
+        top_k = 1
+        softmax_output_topk = softmax_output.topk(top_k)[1].view(softmax_output.shape[0], top_k)
+        embeded_caption = self.embed(softmax_output_topk)
+        # print('captions.shape:', captions.shape)
+        # print('softmax_outputs.shape:', softmax_outputs.shape)
+        # print('fc1_output.shape:', fc1_output.shape)
+        # print('softmax_output.shape:', softmax_output.shape)
+        # print('softmax_output_topk.shape:', softmax_output_topk.shape)
+        # print('embeded_caption.shape:', embeded_caption.shape)
+
+        softmax_outputs[:, 0, :] = softmax_output[:, 0, :]
+
+        for batch in range(features.shape[0]):
+            for step in range(captions.shape[1]-1):
+                # print('embeded_caption.shape:', embeded_caption.shape, ', step:', step)
+                lstm_output, (h[:, batch:batch+1, :], c[:, batch:batch+1, :]) = self.lstm(embeded_caption[batch:batch+1], (h[:, batch:batch+1, :].clone(), c[:, batch:batch+1, :].clone()))
+                fc1_output = self.fc1(lstm_output)
+                softmax_output = self.softmax(fc1_output)   # TODO, save softmax_output
+                # print('softmax_output.shape:', softmax_output.shape)
+                # print(softmax_output.topk(1))
+                softmax_output_topk = softmax_output.topk(1)[1].view(1, -1)
+                embeded_caption[batch:batch+1] = self.embed(softmax_output_topk)
+
+                softmax_outputs[batch, step] = softmax_output[0, 0]
+
+        print("DecoderRNN forward softmax_outputs.shape:", softmax_outputs.shape)
+        return softmax_outputs
 
     def sample(self, inputs, states=None, max_len=20):
         " accepts pre-processed image tensor (inputs) and returns predicted sentence (list of tensor ids of length max_len) "
@@ -57,5 +83,5 @@ class DecoderRNN(nn.Module):
 
 
 if __name__ == '__main__':
-    encoder = DecoderRNN(100, 200, 900, 2)
-    print(encoder)
+    decoder = DecoderRNN(100, 200, 900, 2)
+    print(decoder)
